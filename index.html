@@ -40,60 +40,35 @@ rows="8" placeholder="Hasil muncul di sini..."></textarea>
 </div>
 
 <script>
-
 const WORKER = "https://remote.stakemail91.workers.dev";
-
-document.querySelectorAll("[name=mode]").forEach(r => {
-  r.onchange = () => {
-    const mode = document.querySelector("[name=mode]:checked").value;
-    single.classList.toggle("hidden", mode !== "single");
-    bulk.classList.toggle("hidden", mode !== "bulk");
-  };
-});
 
 form.onsubmit = async (e) => {
   e.preventDefault();
 
-  const mode = document.querySelector("[name=mode]:checked").value;
-  let urls = [];
+  const url = document.getElementById("url").value;
 
-  if (mode === "single") {
-    urls = [single.value];
-  } else {
-    urls = bulk.value.split("\n").map(x => x.trim()).filter(x => x);
-  }
+  result.innerHTML = "⏳ Processing...";
 
-  result.value = "⏳ Processing...\n";
+  try {
+    const res = await fetch(WORKER, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ url })
+    });
 
-  let output = [];
+    const data = await res.json();
 
-  for (let url of urls) {
-
-    try {
-      const res = await fetch(WORKER, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        output.push("✅ " + url);
-      } else {
-        output.push("❌ " + url + " | " + data.error);
-      }
-
-    } catch (err) {
-      output.push("❌ " + url + " | FETCH ERROR");
+    if (data.success) {
+      // 🔥 REDIRECT KE PLAYER
+      window.location.href = "player.html?video=" + encodeURIComponent(data.video);
+    } else {
+      result.innerHTML = `<div class="bg-red-100 p-3 rounded">❌ ${data.error}</div>`;
     }
 
+  } catch (err) {
+    result.innerHTML = "❌ Error fetch";
   }
-
-  result.value = output.join("\n");
-
 };
-
 </script>
 </body>
 </html>
