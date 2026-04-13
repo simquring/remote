@@ -64,15 +64,7 @@
 </div>
 
 <script>
-
-const WORKER_URL = "https://remote.stakemail91.workers.dev"; // ganti ini
-
-function toggleMode() {
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-
-    document.getElementById('single-form').classList.toggle('hidden', mode !== 'single');
-    document.getElementById('bulk-form').classList.toggle('hidden', mode !== 'bulk');
-}
+const WORKER_URL = "https://remote.stakemail91.workers.dev";
 
 document.getElementById("formDownload").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -83,8 +75,14 @@ document.getElementById("formDownload").addEventListener("submit", async (e) => 
     if (mode === "single") {
         urls.push(document.getElementById("video_url").value);
     } else {
-        urls = document.getElementById("bulk_urls").value.split("\n").filter(x => x.trim());
+        urls = document.getElementById("bulk_urls").value
+            .split("\n")
+            .map(x => x.trim())
+            .filter(x => x);
     }
+
+    const resultBox = document.getElementById("result");
+    resultBox.value = "⏳ Processing...\n";
 
     let results = [];
 
@@ -93,30 +91,19 @@ document.getElementById("formDownload").addEventListener("submit", async (e) => 
             const res = await fetch(WORKER_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    url: url,
-                    title: "Auto Upload"
-                })
+                body: JSON.stringify({ url })
             });
 
-            const text = await res.text();
-            results.push(text);
+            const data = await res.text();
+            results.push("URL: " + url + "\n" + data);
 
         } catch (err) {
-            results.push("ERROR: " + err.message);
+            results.push("URL: " + url + "\n❌ ERROR FETCH: " + err.message);
         }
     }
 
-    document.getElementById("result").value = results.join("\n\n");
+    resultBox.value = results.join("\n\n-----------------\n\n");
 });
-
-function copyAllLinks() {
-    const textarea = document.getElementById("result");
-    textarea.select();
-    document.execCommand("copy");
-    alert("✅ Semua hasil dicopy!");
-}
-
 </script>
 
 </body>
