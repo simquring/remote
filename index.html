@@ -1,51 +1,19 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Videy Tool</title>
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-<div class="max-w-2xl w-full p-6">
-
-<h1 class="text-2xl font-bold text-center mb-4">
-🚀 Videy Upload Tool
-</h1>
-
-<form id="form" class="bg-white p-4 rounded shadow">
-
-<div class="mb-3">
-<label><input type="radio" name="mode" value="single" checked> Single</label>
-<label class="ml-4"><input type="radio" name="mode" value="bulk"> Bulk</label>
-</div>
-
-<input id="single" class="w-full border p-2 mb-2 rounded"
-placeholder="https://video.mp4">
-
-<textarea id="bulk" class="w-full border p-2 mb-2 rounded hidden"
-rows="5" placeholder="1 link per baris"></textarea>
-
-<button class="bg-blue-600 text-white w-full py-2 rounded">
-UPLOAD
-</button>
-
-</form>
-
-<textarea id="result"
-class="w-full mt-4 p-3 border rounded"
-rows="8" placeholder="Hasil muncul di sini..."></textarea>
-
-</div>
-
 <script>
 const WORKER = "https://remote.stakemail91.workers.dev";
 
-form.onsubmit = async (e) => {
+// ✅ ambil form dengan benar
+const form = document.getElementById("form");
+const result = document.getElementById("result");
+
+form.addEventListener("submit", async function(e) {
   e.preventDefault();
 
-  const url = document.getElementById("url").value;
+  const urlInput = document.getElementById("url").value;
+
+  if (!urlInput) {
+    result.innerHTML = "❌ Masukkan URL dulu";
+    return;
+  }
 
   result.innerHTML = "⏳ Processing...";
 
@@ -53,22 +21,20 @@ form.onsubmit = async (e) => {
     const res = await fetch(WORKER, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url: urlInput })
     });
 
     const data = await res.json();
 
     if (data.success) {
-      // 🔥 REDIRECT KE PLAYER
+      // 🔥 redirect ke player
       window.location.href = "player.html?video=" + encodeURIComponent(data.video);
     } else {
       result.innerHTML = `<div class="bg-red-100 p-3 rounded">❌ ${data.error}</div>`;
     }
 
   } catch (err) {
-    result.innerHTML = "❌ Error fetch";
+    result.innerHTML = "❌ Fetch error: " + err.message;
   }
-};
+});
 </script>
-</body>
-</html>
