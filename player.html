@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Player</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-black text-white min-h-screen flex flex-col items-center justify-center">
+
+<div class="w-full max-w-3xl p-4">
+
+<h1 class="text-xl mb-4 text-center">🎬 Video Player</h1>
+
+<video id="videoPlayer" controls autoplay class="w-full rounded">
+</video>
+
+<div class="mt-4 text-center">
+  <a id="downloadBtn" href="#" target="_blank"
+     class="bg-blue-600 px-4 py-2 rounded">
+     ⬇️ Download
+  </a>
+</div>
+
+</div>
+
+<script>
+
+// ambil parameter dari URL
+const params = new URLSearchParams(window.location.search);
+const videoUrl = params.get("video");
+
+if (videoUrl) {
+  document.getElementById("videoPlayer").src = videoUrl;
+  document.getElementById("downloadBtn").href = videoUrl;
+} else {
+  document.body.innerHTML = "❌ Video tidak ditemukan";
+}
+
+</script>
+
+</body>
+</html>
