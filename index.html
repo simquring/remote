@@ -1,94 +1,99 @@
-export default {
-  async fetch(request) {
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Videy Tool</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-    const cors = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    };
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<div class="max-w-2xl w-full p-6">
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: cors });
-    }
+<h1 class="text-2xl font-bold text-center mb-4">
+🚀 Videy Upload Tool
+</h1>
 
-    if (request.method !== "POST") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "Use POST"
-      }), { headers: cors });
-    }
+<form id="form" class="bg-white p-4 rounded shadow">
+
+<div class="mb-3">
+<label><input type="radio" name="mode" value="single" checked> Single</label>
+<label class="ml-4"><input type="radio" name="mode" value="bulk"> Bulk</label>
+</div>
+
+<input id="single" class="w-full border p-2 mb-2 rounded"
+placeholder="https://video.mp4">
+
+<textarea id="bulk" class="w-full border p-2 mb-2 rounded hidden"
+rows="5" placeholder="1 link per baris"></textarea>
+
+<button class="bg-blue-600 text-white w-full py-2 rounded">
+UPLOAD
+</button>
+
+</form>
+
+<textarea id="result"
+class="w-full mt-4 p-3 border rounded"
+rows="8" placeholder="Hasil muncul di sini..."></textarea>
+
+</div>
+
+<script>
+
+const WORKER = "https://remote.stakemail91.workers.dev";
+
+document.querySelectorAll("[name=mode]").forEach(r => {
+  r.onchange = () => {
+    const mode = document.querySelector("[name=mode]:checked").value;
+    single.classList.toggle("hidden", mode !== "single");
+    bulk.classList.toggle("hidden", mode !== "bulk");
+  };
+});
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+
+  const mode = document.querySelector("[name=mode]:checked").value;
+  let urls = [];
+
+  if (mode === "single") {
+    urls = [single.value];
+  } else {
+    urls = bulk.value.split("\n").map(x => x.trim()).filter(x => x);
+  }
+
+  result.value = "⏳ Processing...\n";
+
+  let output = [];
+
+  for (let url of urls) {
 
     try {
-      const { url } = await request.json();
-
-      if (!url) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "URL kosong"
-        }), { headers: cors });
-      }
-
-      // 🔽 fetch video
-      let videoRes;
-      try {
-        videoRes = await fetch(url);
-      } catch {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "Gagal fetch video"
-        }), { headers: cors });
-      }
-
-      if (!videoRes.ok) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "Video tidak bisa diakses"
-        }), { headers: cors });
-      }
-
-      const blob = await videoRes.blob();
-
-      // 🔽 upload simulasi ke videy
-      let uploadRes;
-      try {
-        const formData = new FormData();
-        formData.append("file", blob, "video.mp4");
-
-        uploadRes = await fetch("https://videy.co/upload", {
-          method: "POST",
-          body: formData,
-          headers: {
-            "User-Agent": "Mozilla/5.0",
-            "Origin": "https://videy.co",
-            "Referer": "https://videy.co/"
-          }
-        });
-
-      } catch {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "Upload gagal (kemungkinan diblok)"
-        }), { headers: cors });
-      }
-
-      const text = await uploadRes.text();
-
-      return new Response(JSON.stringify({
-        success: true,
-        status: uploadRes.status,
-        result: text.substring(0, 300)
-      }), {
-        headers: {
-          ...cors,
-          "Content-Type": "application/json"
-        }
+      const res = await fetch(WORKER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
       });
 
+      const data = await res.json();
+
+      if (data.success) {
+        output.push("✅ " + url);
+      } else {
+        output.push("❌ " + url + " | " + data.error);
+      }
+
     } catch (err) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: err.message
-      }), { headers: cors });
+      output.push("❌ " + url + " | FETCH ERROR");
     }
+
   }
+
+  result.value = output.join("\n");
+
 };
+
+</script>
+</body>
+</html>
