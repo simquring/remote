@@ -1,110 +1,94 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloader + Upload Videy</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
+export default {
+  async fetch(request) {
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-<div class="container mx-auto px-4 py-8 max-w-2xl">
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
 
-    <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">
-        Downloader + Upload Videy
-    </h1>
-
-    <form id="formDownload" class="bg-white p-6 rounded-lg shadow-md">
-
-        <h2 class="text-lg font-semibold text-gray-700 mb-4">Pilih Mode</h2>
-
-        <div class="flex space-x-4 mb-4">
-            <label class="flex items-center">
-                <input type="radio" name="mode" value="single" checked onchange="toggleMode()">
-                <span class="ml-2">Single</span>
-            </label>
-            <label class="flex items-center">
-                <input type="radio" name="mode" value="bulk" onchange="toggleMode()">
-                <span class="ml-2">Bulk</span>
-            </label>
-        </div>
-
-        <!-- SINGLE -->
-        <div id="single-form">
-            <input type="url" id="video_url" placeholder="https://example.com/video.mp4"
-                   class="w-full px-3 py-2 border rounded-lg mb-3">
-        </div>
-
-        <!-- BULK -->
-        <div id="bulk-form" class="hidden">
-            <textarea id="bulk_urls" rows="6"
-                placeholder="1 link per baris..."
-                class="w-full px-3 py-2 border rounded-lg"></textarea>
-        </div>
-
-        <button type="submit"
-            class="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-            🚀 Upload ke Videy
-        </button>
-
-    </form>
-
-    <!-- RESULT -->
-    <div class="bg-white mt-6 p-4 rounded-lg shadow">
-        <h3 class="font-bold mb-2">Hasil:</h3>
-        <textarea id="result" rows="6"
-            class="w-full border p-2 rounded"></textarea>
-
-        <button onclick="copyAllLinks()"
-            class="mt-2 bg-green-600 text-white px-4 py-2 rounded">
-            📋 Copy Semua
-        </button>
-    </div>
-
-</div>
-
-<script>
-const WORKER_URL = "https://remote.stakemail91.workers.dev";
-
-document.getElementById("formDownload").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    let urls = [];
-
-    if (mode === "single") {
-        urls.push(document.getElementById("video_url").value);
-    } else {
-        urls = document.getElementById("bulk_urls").value
-            .split("\n")
-            .map(x => x.trim())
-            .filter(x => x);
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: cors });
     }
 
-    const resultBox = document.getElementById("result");
-    resultBox.value = "⏳ Processing...\n";
+    if (request.method !== "POST") {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Use POST"
+      }), { headers: cors });
+    }
 
-    let results = [];
+    try {
+      const { url } = await request.json();
 
-    for (let url of urls) {
-        try {
-            const res = await fetch(WORKER_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url })
-            });
+      if (!url) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "URL kosong"
+        }), { headers: cors });
+      }
 
-            const data = await res.text();
-            results.push("URL: " + url + "\n" + data);
+      // 🔽 fetch video
+      let videoRes;
+      try {
+        videoRes = await fetch(url);
+      } catch {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Gagal fetch video"
+        }), { headers: cors });
+      }
 
-        } catch (err) {
-            results.push("URL: " + url + "\n❌ ERROR FETCH: " + err.message);
+      if (!videoRes.ok) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Video tidak bisa diakses"
+        }), { headers: cors });
+      }
+
+      const blob = await videoRes.blob();
+
+      // 🔽 upload simulasi ke videy
+      let uploadRes;
+      try {
+        const formData = new FormData();
+        formData.append("file", blob, "video.mp4");
+
+        uploadRes = await fetch("https://videy.co/upload", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            "Origin": "https://videy.co",
+            "Referer": "https://videy.co/"
+          }
+        });
+
+      } catch {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Upload gagal (kemungkinan diblok)"
+        }), { headers: cors });
+      }
+
+      const text = await uploadRes.text();
+
+      return new Response(JSON.stringify({
+        success: true,
+        status: uploadRes.status,
+        result: text.substring(0, 300)
+      }), {
+        headers: {
+          ...cors,
+          "Content-Type": "application/json"
         }
+      });
+
+    } catch (err) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: err.message
+      }), { headers: cors });
     }
-
-    resultBox.value = results.join("\n\n-----------------\n\n");
-});
-</script>
-
-</body>
-</html>
+  }
+};
